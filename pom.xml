@@ -6,7 +6,7 @@
 
     <groupId>com.restship</groupId>
     <artifactId>rest-build-parent</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Minerest Build Parent</name>
@@ -58,6 +58,7 @@
         <gson.version>2.10.1</gson.version>
 
         <!-- Redis -->
+        <jedis.version>5.1.0</jedis.version>
         <lettuce.version>6.3.2.RELEASE</lettuce.version>
 
         <!-- Minecraft APIs -->
@@ -94,6 +95,14 @@
         <repository>
             <id>restship</id>
             <url>https://maven.pkg.github.com/romulofebasi/restship</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>restship-build</id>
+            <url>https://maven.pkg.github.com/luizroddev/rest-build-parent</url>
             <snapshots>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
