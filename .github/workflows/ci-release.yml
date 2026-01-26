@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      release-version:
+        description: 'Release version (e.g. 1.0.0). Leave empty to auto-strip -SNAPSHOT.'
+        required: false
+        type: string
+        default: ''
+      next-snapshot-version:
+        description: 'Next development version (e.g. 1.0.1-SNAPSHOT). Leave empty to auto-increment patch.'
+        required: false
+        type: string
+        default: ''
+      java-version:
+        description: 'Java version to use (17 or 22)'
+        required: false
+        type: string
+        default: '22'
+      java-distribution:
+        description: 'Java distribution (temurin, graalvm, etc.)'
+        required: false
+        type: string
+        default: 'temurin'
+      maven-args:
+        description: 'Extra Maven arguments'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      PACKAGES_TOKEN:
+        description: 'GitHub PAT with read:packages, write:packages, repo scopes'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PACKAGES_TOKEN }}
+
+      - name: Set up Java ${{ inputs.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ inputs.java-distribution }}
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+          server-id: restship
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine versions
+        id: versions
+        run: |
+          CURRENT=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "Current version: $CURRENT"
+
+          # Release version
+          if [ -n "${{ inputs.release-version }}" ]; then
+            RELEASE="${{ inputs.release-version }}"
+          else
+            RELEASE="${CURRENT%-SNAPSHOT}"
+          fi
+          echo "Release version: $RELEASE"
+
+          # Next SNAPSHOT version
+          if [ -n "${{ inputs.next-snapshot-version }}" ]; then
+            NEXT="${{ inputs.next-snapshot-version }}"
+          else
+            # Auto-increment patch version
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE"
+            NEXT_PATCH=$((PATCH + 1))
+            NEXT="${MAJOR}.${MINOR}.${NEXT_PATCH}-SNAPSHOT"
+          fi
+          echo "Next SNAPSHOT version: $NEXT"
+
+          echo "release=$RELEASE" >> $GITHUB_OUTPUT
+          echo "next=$NEXT" >> $GITHUB_OUTPUT
+
+      - name: Set release version
+        run: |
+          mvn -B versions:set -DnewVersion=${{ steps.versions.outputs.release }} -DgenerateBackupPoms=false
+          git add pom.xml
+          git commit -m "release: v${{ steps.versions.outputs.release }}"
+
+      - name: Build and deploy release
+        run: mvn -B clean deploy -DskipTests ${{ inputs.maven-args }}
+        env:
+          MAVEN_USERNAME: ${{ github.actor }}
+          MAVEN_PASSWORD: ${{ secrets.PACKAGES_TOKEN }}
+
+      - name: Create Git tag
+        run: |
+          git tag "v${{ steps.versions.outputs.release }}"
+
+      - name: Bump to next SNAPSHOT
+        run: |
+          mvn -B versions:set -DnewVersion=${{ steps.versions.outputs.next }} -DgenerateBackupPoms=false
+          git add pom.xml
+          git commit -m "chore: bump version to ${{ steps.versions.outputs.next }}"
+
+      - name: Push changes and tag
+        run: |
+          git push origin HEAD
+          git push origin "v${{ steps.versions.outputs.release }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
