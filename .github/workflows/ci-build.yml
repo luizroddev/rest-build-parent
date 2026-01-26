@@ -36,18 +36,54 @@ jobs:
           distribution: ${{ inputs.java-distribution }}
           java-version: ${{ inputs.java-version }}
           cache: maven
-          server-id: restship
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
+          overwrite-settings: false
+
+      - name: Configure Maven settings
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml << EOF
+          <settings>
+            <activeProfiles>
+              <activeProfile>restship</activeProfile>
+            </activeProfiles>
+            <profiles>
+              <profile>
+                <id>restship</id>
+                <repositories>
+                  <repository>
+                    <id>central</id>
+                    <url>https://repo1.maven.org/maven2</url>
+                  </repository>
+                  <repository>
+                    <id>restship</id>
+                    <url>https://maven.pkg.github.com/romulofebasi/restship</url>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                  <repository>
+                    <id>restship-build</id>
+                    <url>https://maven.pkg.github.com/luizroddev/rest-build-parent</url>
+                    <snapshots><enabled>true</enabled></snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+            <servers>
+              <server>
+                <id>restship</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.PACKAGES_TOKEN }}</password>
+              </server>
+              <server>
+                <id>restship-build</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.PACKAGES_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
 
       - name: Build with Maven
         run: mvn -B clean package -DskipTests ${{ inputs.maven-args }}
-        env:
-          MAVEN_USERNAME: ${{ github.actor }}
-          MAVEN_PASSWORD: ${{ secrets.PACKAGES_TOKEN }}
 
       - name: Run tests
         run: mvn -B test ${{ inputs.maven-args }}
-        env:
-          MAVEN_USERNAME: ${{ github.actor }}
-          MAVEN_PASSWORD: ${{ secrets.PACKAGES_TOKEN }}
