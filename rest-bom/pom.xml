@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.restship</groupId>
+        <artifactId>rest-build-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>rest-bom</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Minerest BOM</name>
+    <description>Bill of Materials for the Minerest server network. Import this in dependencyManagement to get consistent dependency versions.</description>
+
+    <!-- ================================================================== -->
+    <!-- Dependency Management                                              -->
+    <!-- Import this BOM in child POMs:                                     -->
+    <!--   <dependencyManagement>                                           -->
+    <!--     <dependencies>                                                 -->
+    <!--       <dependency>                                                 -->
+    <!--         <groupId>com.restship</groupId>                            -->
+    <!--         <artifactId>rest-bom</artifactId>                          -->
+    <!--         <version>${rest-bom.version}</version>                     -->
+    <!--         <type>pom</type>                                           -->
+    <!--         <scope>import</scope>                                      -->
+    <!--       </dependency>                                                -->
+    <!--     </dependencies>                                                -->
+    <!--   </dependencyManagement>                                          -->
+    <!-- ================================================================== -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- ======================================================== -->
+            <!-- Restship Internal Modules                                -->
+            <!-- ======================================================== -->
+            <dependency>
+                <groupId>com.restship.server</groupId>
+                <artifactId>restserver</artifactId>
+                <version>${restserver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.restship.module</groupId>
+                <artifactId>logger</artifactId>
+                <version>${logger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.restship.module</groupId>
+                <artifactId>concurrency</artifactId>
+                <version>${concurrency.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.restship.module</groupId>
+                <artifactId>network</artifactId>
+                <version>${network.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.restship.module</groupId>
+                <artifactId>minecore</artifactId>
+                <version>${minecore.version}</version>
+            </dependency>
+
+            <!-- ======================================================== -->
+            <!-- Database                                                 -->
+            <!-- ======================================================== -->
+            <dependency>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq</artifactId>
+                <version>${jooq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq-meta</artifactId>
+                <version>${jooq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq-codegen</artifactId>
+                <version>${jooq.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>${hikaricp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-hikaricp</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mysql</groupId>
+                <artifactId>mysql-connector-j</artifactId>
+                <version>${mysql-connector.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mariadb.jdbc</groupId>
+                <artifactId>mariadb-java-client</artifactId>
+                <version>${mariadb-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>nl.jiankai</groupId>
+                <artifactId>resultset-mapper</artifactId>
+                <version>${resultset-mapper.version}</version>
+            </dependency>
+
+            <!-- ======================================================== -->
+            <!-- Serialization / Data                                     -->
+            <!-- ======================================================== -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${gson.version}</version>
+            </dependency>
+
+            <!-- ======================================================== -->
+            <!-- Redis                                                    -->
+            <!-- ======================================================== -->
+            <dependency>
+                <groupId>io.lettuce</groupId>
+                <artifactId>lettuce-core</artifactId>
+                <version>${lettuce.version}</version>
+            </dependency>
+
+            <!-- ======================================================== -->
+            <!-- Minecraft APIs                                           -->
+            <!-- ======================================================== -->
+            <dependency>
+                <groupId>net.kyori</groupId>
+                <artifactId>adventure-platform-bukkit</artifactId>
+                <version>${adventure-platform-bukkit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.kyori</groupId>
+                <artifactId>adventure-api</artifactId>
+                <version>${adventure-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>co.aikar</groupId>
+                <artifactId>acf-paper</artifactId>
+                <version>${acf-paper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.luckperms</groupId>
+                <artifactId>api</artifactId>
+                <version>${luckperms.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.velocitypowered</groupId>
+                <artifactId>velocity-api</artifactId>
+                <version>${velocity-api.version}</version>
+            </dependency>
+
+            <!-- ======================================================== -->
+            <!-- Utilities                                                -->
+            <!-- ======================================================== -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.reflections</groupId>
+                <artifactId>reflections</artifactId>
+                <version>${reflections.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4</artifactId>
+                <version>${antlr4.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.spongepowered</groupId>
+                <artifactId>configurate-hocon</artifactId>
+                <version>${configurate-hocon.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>de.vandermeer</groupId>
+                <artifactId>asciitable</artifactId>
+                <version>${asciitable.version}</version>
+            </dependency>
+
+            <!-- ======================================================== -->
+            <!-- Test                                                     -->
+            <!-- ======================================================== -->
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-inline</artifactId>
+                <version>${mockito.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
