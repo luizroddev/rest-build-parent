@@ -30,8 +30,8 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
 
         <!-- GitHub Packages coordinates: override in child POMs if needed -->
-        <github.owner>romulofebasi</github.owner>
-        <github.repo>${project.artifactId}</github.repo>
+        <github.owner>luizroddev</github.owner>
+        <github.repo>rest-build-parent</github.repo>
 
         <!-- ============================================================ -->
         <!-- Dependency versions (used by rest-bom)                       -->
@@ -42,7 +42,7 @@
         <logger.version>0.0.2-SNAPSHOT</logger.version>
         <concurrency.version>0.0.2</concurrency.version>
         <network.version>1.0.37-SNAPSHOT</network.version>
-        <minecore.version>0.1.75-SNAPSHOT</minecore.version>
+        <minecore.version>0.1.74-SNAPSHOT</minecore.version>
 
         <!-- Database -->
         <jooq.version>3.19.6</jooq.version>
