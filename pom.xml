@@ -38,11 +38,12 @@
         <!-- ============================================================ -->
 
         <!-- Restship internal modules -->
-        <restserver.version>0.0.2</restserver.version>
+        <restserver.version>1.0.4</restserver.version>
         <logger.version>0.0.2-SNAPSHOT</logger.version>
         <concurrency.version>0.0.2</concurrency.version>
         <network.version>1.0.37-SNAPSHOT</network.version>
         <minecore.version>0.1.74-SNAPSHOT</minecore.version>
+        <pvpgame.version>1.0-SNAPSHOT</pvpgame.version>
 
         <!-- Database -->
         <jooq.version>3.19.6</jooq.version>
