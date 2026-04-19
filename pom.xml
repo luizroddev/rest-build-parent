@@ -227,4 +227,35 @@
         </plugins>
     </build>
 
+    <!-- ================================================================== -->
+    <!-- Auto-activate shade and source-jar for any child with real Java     -->
+    <!-- sources. Pom-packaging children (rest-bom, the parent itself) have  -->
+    <!-- no src/main/java and this profile skips, avoiding "no artifact to   -->
+    <!-- shade" errors. Plugin version + default config come from            -->
+    <!-- <pluginManagement> above; children only need to add their own       -->
+    <!-- <filters> / <executions> if they want to customise further.         -->
+    <!-- ================================================================== -->
+    <profiles>
+        <profile>
+            <id>auto-shade-activation</id>
+            <activation>
+                <file>
+                    <exists>src/main/java</exists>
+                </file>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>
