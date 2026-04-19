@@ -37,7 +37,7 @@
             <!-- Restship Internal Modules                                -->
             <!-- ======================================================== -->
             <dependency>
-                <groupId>br.com.minerest</groupId>
+                <groupId>com.restship.server</groupId>
                 <artifactId>restserver</artifactId>
                 <version>${restserver.version}</version>
             </dependency>
