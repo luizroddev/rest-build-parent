@@ -13,29 +13,11 @@
     <artifactId>rest-bom</artifactId>
     <packaging>pom</packaging>
 
-    <name>Minerest BOM</name>
-    <description>Bill of Materials for the Minerest server network. Import this in dependencyManagement to get consistent dependency versions.</description>
+    <name>rest-bom</name>
+    <description>Bill of Materials with managed dependency versions.</description>
 
-    <!-- ================================================================== -->
-    <!-- Dependency Management                                              -->
-    <!-- Import this BOM in child POMs:                                     -->
-    <!--   <dependencyManagement>                                           -->
-    <!--     <dependencies>                                                 -->
-    <!--       <dependency>                                                 -->
-    <!--         <groupId>com.restship</groupId>                            -->
-    <!--         <artifactId>rest-bom</artifactId>                          -->
-    <!--         <version>${rest-bom.version}</version>                     -->
-    <!--         <type>pom</type>                                           -->
-    <!--         <scope>import</scope>                                      -->
-    <!--       </dependency>                                                -->
-    <!--     </dependencies>                                                -->
-    <!--   </dependencyManagement>                                          -->
-    <!-- ================================================================== -->
     <dependencyManagement>
         <dependencies>
-            <!-- ======================================================== -->
-            <!-- Restship Internal Modules                                -->
-            <!-- ======================================================== -->
             <dependency>
                 <groupId>com.restship.server</groupId>
                 <artifactId>restserver</artifactId>
@@ -72,9 +54,6 @@
                 <version>${pvpgame.version}</version>
             </dependency>
 
-            <!-- ======================================================== -->
-            <!-- Database                                                 -->
-            <!-- ======================================================== -->
             <dependency>
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq</artifactId>
@@ -126,9 +105,6 @@
                 <version>${resultset-mapper.version}</version>
             </dependency>
 
-            <!-- ======================================================== -->
-            <!-- Serialization / Data                                     -->
-            <!-- ======================================================== -->
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
@@ -140,9 +116,6 @@
                 <version>${gson.version}</version>
             </dependency>
 
-            <!-- ======================================================== -->
-            <!-- Redis                                                    -->
-            <!-- ======================================================== -->
             <dependency>
                 <groupId>redis.clients</groupId>
                 <artifactId>jedis</artifactId>
@@ -154,9 +127,6 @@
                 <version>${lettuce.version}</version>
             </dependency>
 
-            <!-- ======================================================== -->
-            <!-- Minecraft APIs                                           -->
-            <!-- ======================================================== -->
             <dependency>
                 <groupId>net.kyori</groupId>
                 <artifactId>adventure-platform-bukkit</artifactId>
@@ -183,9 +153,6 @@
                 <version>${velocity-api.version}</version>
             </dependency>
 
-            <!-- ======================================================== -->
-            <!-- Utilities                                                -->
-            <!-- ======================================================== -->
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
@@ -212,9 +179,6 @@
                 <version>${asciitable.version}</version>
             </dependency>
 
-            <!-- ======================================================== -->
-            <!-- Test                                                     -->
-            <!-- ======================================================== -->
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
