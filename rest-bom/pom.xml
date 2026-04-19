@@ -42,6 +42,11 @@
                 <version>${restserver.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.restship.server</groupId>
+                <artifactId>restserver-api</artifactId>
+                <version>${restserver.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.restship.module</groupId>
                 <artifactId>logger</artifactId>
                 <version>${logger.version}</version>
@@ -60,6 +65,11 @@
                 <groupId>com.restship.module</groupId>
                 <artifactId>minecore</artifactId>
                 <version>${minecore.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.restship</groupId>
+                <artifactId>rest-module-pvpgame</artifactId>
+                <version>${pvpgame.version}</version>
             </dependency>
 
             <!-- ======================================================== -->
