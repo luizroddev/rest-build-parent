@@ -57,12 +57,18 @@ jobs:
                   <repository>
                     <id>restship</id>
                     <url>https://maven.pkg.github.com/romulofebasi/restship</url>
-                    <snapshots><enabled>true</enabled></snapshots>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
                   </repository>
                   <repository>
                     <id>restship-build</id>
                     <url>https://maven.pkg.github.com/luizroddev/rest-build-parent</url>
-                    <snapshots><enabled>true</enabled></snapshots>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
                   </repository>
                 </repositories>
               </profile>
@@ -92,4 +98,4 @@ jobs:
           fi
 
       - name: Deploy to GitHub Packages
-        run: mvn -B clean deploy -DskipTests ${{ inputs.maven-args }}
+        run: mvn -B -U clean deploy -DskipTests ${{ inputs.maven-args }}

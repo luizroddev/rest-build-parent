@@ -70,12 +70,18 @@ jobs:
                   <repository>
                     <id>restship</id>
                     <url>https://maven.pkg.github.com/romulofebasi/restship</url>
-                    <snapshots><enabled>true</enabled></snapshots>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
                   </repository>
                   <repository>
                     <id>restship-build</id>
                     <url>https://maven.pkg.github.com/luizroddev/rest-build-parent</url>
-                    <snapshots><enabled>true</enabled></snapshots>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
                   </repository>
                 </repositories>
               </profile>
@@ -135,7 +141,7 @@ jobs:
           git commit -m "release: v${{ steps.versions.outputs.release }}"
 
       - name: Build and deploy release
-        run: mvn -B clean deploy -DskipTests ${{ inputs.maven-args }}
+        run: mvn -B -U clean deploy -DskipTests ${{ inputs.maven-args }}
 
       - name: Create Git tag
         run: |
