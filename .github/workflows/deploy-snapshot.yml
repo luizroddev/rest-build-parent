@@ -1,0 +1,14 @@
+name: Deploy Snapshot
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/ci-deploy-snapshot.yml
+    with:
+      java-version: '22'
+    secrets:
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
