@@ -70,6 +70,14 @@ jobs:
                       <updatePolicy>always</updatePolicy>
                     </snapshots>
                   </repository>
+                  <repository>
+                    <id>restship-pvpgame</id>
+                    <url>https://maven.pkg.github.com/luizroddev/rest-module-pvpgame</url>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                  </repository>
                 </repositories>
               </profile>
             </profiles>
@@ -81,6 +89,11 @@ jobs:
               </server>
               <server>
                 <id>restship-build</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.PACKAGES_TOKEN }}</password>
+              </server>
+              <server>
+                <id>restship-pvpgame</id>
                 <username>${{ github.actor }}</username>
                 <password>${{ secrets.PACKAGES_TOKEN }}</password>
               </server>
