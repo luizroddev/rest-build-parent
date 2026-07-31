@@ -43,6 +43,7 @@
         <concurrency.version>0.0.2</concurrency.version>
         <network.version>1.0.37-SNAPSHOT</network.version>
         <minecore.version>0.1.75-SNAPSHOT</minecore.version>
+        <pvpgame.version>1.0-SNAPSHOT</pvpgame.version>
 
         <!-- Database -->
         <jooq.version>3.19.6</jooq.version>
@@ -103,6 +104,14 @@
         <repository>
             <id>restship-build</id>
             <url>https://maven.pkg.github.com/luizroddev/rest-build-parent</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>restship-pvpgame</id>
+            <url>https://maven.pkg.github.com/luizroddev/rest-module-pvpgame</url>
             <snapshots>
                 <enabled>true</enabled>
                 <updatePolicy>always</updatePolicy>
