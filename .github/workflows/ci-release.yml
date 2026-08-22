@@ -440,7 +440,10 @@ jobs:
           git clone --depth 1 "https://x-access-token:${BOM_TOKEN}@github.com/${BOM_REPO}.git" "$WORK"
           cd "$WORK"
 
-          CURRENT=$(sed -n "s|.*<${BOM_PROPERTY}>\(.*\)</${BOM_PROPERTY}>.*|\1|p" pom.xml | head -1)
+          # Quits at the first match rather than piping into `head -1`. Under
+          # `set -o pipefail` that pipe aborts the step with 141 once the file is large
+          # enough for head to close it while sed is still writing.
+          CURRENT=$(sed -n "/<${BOM_PROPERTY}>/{s|.*<${BOM_PROPERTY}>\(.*\)</${BOM_PROPERTY}>.*|\1|p;q;}" pom.xml)
           if [ -z "$CURRENT" ]; then
             echo "::error::property <${BOM_PROPERTY}> not found in ${BOM_REPO}/pom.xml"
             exit 1
