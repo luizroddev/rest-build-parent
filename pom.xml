@@ -87,6 +87,7 @@
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven-deploy-plugin.version>3.1.3</maven-deploy-plugin.version>
         <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
+        <git-changelog-maven-plugin.version>2.2.5</git-changelog-maven-plugin.version>
     </properties>
 
     <!-- ================================================================== -->
@@ -255,6 +256,88 @@
                     <configuration>
                         <tagNameFormat>v@{project.version}</tagNameFormat>
                         <autoVersionSubmodules>true</autoVersionSubmodules>
+                    </configuration>
+                </plugin>
+
+                <!-- Changelog generation.
+
+                     Deliberately has NO <executions>. Binding this to a lifecycle
+                     phase (as handbook/CHANGELOG_GUIDE.md used to prescribe) makes
+                     every `mvn package` rewrite CHANGELOG.md, so every developer
+                     carries a permanently dirty working tree and every PR shows a
+                     spurious changelog diff. ci-release.yml invokes the goal
+                     explicitly instead, once per release.
+
+                     Only the template and the ignore filter live here, because an
+                     explicit <configuration> in the POM overrides the matching -D
+                     user property. Everything the release varies per run —
+                     untaggedName, fromRevision, file, extendedVariablesCli — must
+                     stay absent here so the workflow can supply it. -->
+                <plugin>
+                    <groupId>se.bjurr.gitchangelog</groupId>
+                    <artifactId>git-changelog-maven-plugin</artifactId>
+                    <version>${git-changelog-maven-plugin.version}</version>
+                    <configuration>
+                        <!-- Dropped entirely: merge commits, the release job's own
+                             version-bump commits, and the commit types that mean
+                             nothing to someone consuming the artifact. refactor is
+                             kept on purpose — in a library it is where API movement
+                             shows up. -->
+                        <ignoreCommitsIfMessageMatches>(?s)^(Merge |Revert |release: v|chore: bump version to |(docs|style|test|build|ci|chore|release)(\([^)]*\))?!?: ).*</ignoreCommitsIfMessageMatches>
+                        <templateContent><![CDATA[
+{{#tags}}
+## [{{name}}] - {{releaseDate}}
+{{#ifContainsBreaking commits}}
+
+### Breaking Changes
+{{#commits}}{{#ifCommitBreaking .}}
+- {{#eachCommitScope .}}**{{.}}**: {{/eachCommitScope}}{{{commitDescription .}}} ([{{hash}}](https://github.com/{{ownerName}}/{{repoName}}/commit/{{hashFull}}))
+{{/ifCommitBreaking}}{{/commits}}
+{{/ifContainsBreaking}}
+{{#ifContainsType commits type='feat'}}
+
+### Features
+{{#commits}}{{#ifCommitType . type='feat'}}
+- {{#eachCommitScope .}}**{{.}}**: {{/eachCommitScope}}{{{commitDescription .}}} ([{{hash}}](https://github.com/{{ownerName}}/{{repoName}}/commit/{{hashFull}}))
+{{/ifCommitType}}{{/commits}}
+{{/ifContainsType}}
+{{#ifContainsType commits type='fix'}}
+
+### Bug Fixes
+{{#commits}}{{#ifCommitType . type='fix'}}
+- {{#eachCommitScope .}}**{{.}}**: {{/eachCommitScope}}{{{commitDescription .}}} ([{{hash}}](https://github.com/{{ownerName}}/{{repoName}}/commit/{{hashFull}}))
+{{/ifCommitType}}{{/commits}}
+{{/ifContainsType}}
+{{#ifContainsType commits type='hotfix'}}
+
+### Hotfixes
+{{#commits}}{{#ifCommitType . type='hotfix'}}
+- {{#eachCommitScope .}}**{{.}}**: {{/eachCommitScope}}{{{commitDescription .}}} ([{{hash}}](https://github.com/{{ownerName}}/{{repoName}}/commit/{{hashFull}}))
+{{/ifCommitType}}{{/commits}}
+{{/ifContainsType}}
+{{#ifContainsType commits type='perf'}}
+
+### Performance
+{{#commits}}{{#ifCommitType . type='perf'}}
+- {{#eachCommitScope .}}**{{.}}**: {{/eachCommitScope}}{{{commitDescription .}}} ([{{hash}}](https://github.com/{{ownerName}}/{{repoName}}/commit/{{hashFull}}))
+{{/ifCommitType}}{{/commits}}
+{{/ifContainsType}}
+{{#ifContainsType commits type='refactor'}}
+
+### Internal Changes
+{{#commits}}{{#ifCommitType . type='refactor'}}
+- {{#eachCommitScope .}}**{{.}}**: {{/eachCommitScope}}{{{commitDescription .}}} ([{{hash}}](https://github.com/{{ownerName}}/{{repoName}}/commit/{{hashFull}}))
+{{/ifCommitType}}{{/commits}}
+{{/ifContainsType}}
+{{#ifContainsType commits type='revert'}}
+
+### Reverted
+{{#commits}}{{#ifCommitType . type='revert'}}
+- {{#eachCommitScope .}}**{{.}}**: {{/eachCommitScope}}{{{commitDescription .}}} ([{{hash}}](https://github.com/{{ownerName}}/{{repoName}}/commit/{{hashFull}}))
+{{/ifCommitType}}{{/commits}}
+{{/ifContainsType}}
+{{/tags}}
+]]></templateContent>
                     </configuration>
                 </plugin>
             </plugins>
