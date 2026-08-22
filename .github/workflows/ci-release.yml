@@ -279,10 +279,20 @@ jobs:
           # the insert. Either way, do not write a second one.
           if grep -q "^## \[${RELEASE}\]" CHANGELOG.md; then
             echo "CHANGELOG.md already documents ${RELEASE}; reusing that section."
+            # Stops at the next version heading OR at a horizontal rule, because the
+            # oldest section in a seeded changelog is followed by a footer rather than
+            # by another heading — without the second guard that footer ends up inside
+            # the release notes. Leading and trailing blank lines are dropped so the
+            # notes start at the first real line.
             awk -v h="## [${RELEASE}]" '
               index($0, h) == 1 { found = 1; next }
-              found && /^## \[/ { exit }
-              found { print }
+              found && (/^## \[/ || /^---$/) { exit }
+              found {
+                if (n == 0 && !NF) next
+                lines[++n] = $0
+                if (NF) last = n
+              }
+              END { for (i = 1; i <= last; i++) print lines[i] }
             ' CHANGELOG.md > "$SECTION"
             echo "generated=true" >> "$GITHUB_OUTPUT"
             echo "section=$SECTION" >> "$GITHUB_OUTPUT"
