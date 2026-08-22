@@ -160,6 +160,39 @@
     <!-- Plugin Management                                                  -->
     <!-- ================================================================== -->
     <build>
+        <!-- Resource filtering, deliberately scoped to plugin.yml.
+
+             plugin.yml carries a version that must match the POM. Copying it by
+             hand is what let every plugin.yml in the network drift: minecore sat
+             at 0.0.1 while the POM was at 0.1.76. Deriving it removes the drift
+             at the source, in every build rather than only at release time.
+
+             The filtering is scoped to plugin.yml alone because filtering runs a
+             text substitution over whatever it touches, and several children ship
+             binary resources (rest-plugin-royale has victory_template.png and
+             GulagSS.schematic). The second, unfiltered block copies everything
+             else verbatim. Both blocks are required: declaring only the first
+             would silently stop every other resource from being copied.
+
+             Children that declare their own <resources> override this wholesale
+             and must repeat both blocks. None do today. -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>plugin.yml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>plugin.yml</exclude>
+                </excludes>
+            </resource>
+        </resources>
+
         <pluginManagement>
             <plugins>
                 <!-- Compiler: version and source/target only.
