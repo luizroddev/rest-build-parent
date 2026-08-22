@@ -272,7 +272,13 @@
                      explicit <configuration> in the POM overrides the matching -D
                      user property. Everything the release varies per run —
                      untaggedName, fromRevision, file, extendedVariablesCli — must
-                     stay absent here so the workflow can supply it. -->
+                     stay absent here so the workflow can supply it.
+
+                     The entry line is repeated once per section rather than factored
+                     into a Handlebars partial. A partial receives its context as a
+                     Map, and this plugin's helpers (eachCommitScope,
+                     commitDescription) cast their argument to Commit, so the render
+                     dies with a ClassCastException. Tried; keep the repetition. -->
                 <plugin>
                     <groupId>se.bjurr.gitchangelog</groupId>
                     <artifactId>git-changelog-maven-plugin</artifactId>
