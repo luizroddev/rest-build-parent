@@ -42,7 +42,7 @@
         <logger.version>0.0.2-SNAPSHOT</logger.version>
         <concurrency.version>0.0.2</concurrency.version>
         <network.version>1.0.37-SNAPSHOT</network.version>
-        <minecore.version>0.1.77</minecore.version>
+        <minecore.version>0.1.78-SNAPSHOT</minecore.version>
         <pvpgame.version>1.0-SNAPSHOT</pvpgame.version>
 
         <!-- Database -->
@@ -76,8 +76,10 @@
         <configurate-hocon.version>3.7</configurate-hocon.version>
         <asciitable.version>0.3.2</asciitable.version>
 
-        <!-- Test -->
-        <mockito.version>4.0.0</mockito.version>
+        <!-- Test. Mockito 4's byte-buddy cannot read class files newer than
+             Java 17, so mocking any type compiled for Java 21+ fails with
+             "Unsupported class file major version". 5.x reads Java 23. -->
+        <mockito.version>5.14.2</mockito.version>
 
         <!-- ============================================================ -->
         <!-- Plugin versions                                              -->
@@ -87,6 +89,8 @@
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven-deploy-plugin.version>3.1.3</maven-deploy-plugin.version>
         <maven-release-plugin.version>3.1.1</maven-release-plugin.version>
+        <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+        <maven-dependency-plugin.version>3.7.1</maven-dependency-plugin.version>
         <git-changelog-maven-plugin.version>2.2.5</git-changelog-maven-plugin.version>
     </properties>
 
@@ -196,6 +200,22 @@
 
         <pluginManagement>
             <plugins>
+                <!-- Versions only: no execution is bound here, so declaring these
+                     costs nothing to modules that never mention them. Modules that
+                     do (Gulag attaches Mockito as a JVM agent through surefire)
+                     inherit the version instead of pinning their own. -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>${maven-dependency-plugin.version}</version>
+                </plugin>
+
                 <!-- Compiler: version and source/target only.
                      Child POMs add their own <compilerArgs> (e.g. enable-preview, add-opens). -->
                 <plugin>
