@@ -28,23 +28,57 @@ on:
         required: false
         type: string
         default: ''
+      changelog-since:
+        description: >-
+          Revision the changelog starts from on the very first release, before any
+          v* tag exists. Ignored once a tag is present. Leave empty to cover the
+          entire history.
+        required: false
+        type: string
+        default: ''
+      bom-property:
+        description: >-
+          Name of the version property this artifact owns in the rest-bom
+          (e.g. minecore.version). When set, a successful release opens a PR
+          against the BOM repository bumping it. Leave empty to skip.
+        required: false
+        type: string
+        default: ''
+      bom-repository:
+        description: 'Repository holding the BOM property to bump.'
+        required: false
+        type: string
+        default: 'luizroddev/rest-build-parent'
+      attach-artifacts:
+        description: >-
+          Attach the built JARs to the GitHub Release. Library modules are consumed
+          through GitHub Packages and should leave this false; deployable plugins
+          may want it true.
+        required: false
+        type: boolean
+        default: false
     secrets:
       PACKAGES_TOKEN:
         description: 'GitHub PAT with read:packages, write:packages, repo scopes'
         required: true
+      BOM_DISPATCH_TOKEN:
+        description: >-
+          Classic PAT with repo scope that can push to the BOM repository. Only
+          needed when bom-property is set; the BOM PR is skipped without it.
+        required: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.PACKAGES_TOKEN }}
 
       - name: Set up Java ${{ inputs.java-version }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: ${{ inputs.java-distribution }}
           java-version: ${{ inputs.java-version }}
@@ -70,12 +104,26 @@ jobs:
                   <repository>
                     <id>restship</id>
                     <url>https://maven.pkg.github.com/romulofebasi/restship</url>
-                    <snapshots><enabled>true</enabled></snapshots>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
                   </repository>
                   <repository>
                     <id>restship-build</id>
                     <url>https://maven.pkg.github.com/luizroddev/rest-build-parent</url>
-                    <snapshots><enabled>true</enabled></snapshots>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                  </repository>
+                  <repository>
+                    <id>restship-pvpgame</id>
+                    <url>https://maven.pkg.github.com/luizroddev/rest-module-pvpgame</url>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
                   </repository>
                 </repositories>
               </profile>
@@ -91,6 +139,11 @@ jobs:
                 <username>${{ github.actor }}</username>
                 <password>${{ secrets.PACKAGES_TOKEN }}</password>
               </server>
+              <server>
+                <id>restship-pvpgame</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.PACKAGES_TOKEN }}</password>
+              </server>
             </servers>
           </settings>
           EOF
@@ -102,54 +155,328 @@ jobs:
 
       - name: Determine versions
         id: versions
+        env:
+          INPUT_RELEASE: ${{ inputs.release-version }}
+          INPUT_NEXT: ${{ inputs.next-snapshot-version }}
         run: |
+          set -euo pipefail
+
           CURRENT=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          ARTIFACT=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)
           echo "Current version: $CURRENT"
 
-          # Release version
-          if [ -n "${{ inputs.release-version }}" ]; then
-            RELEASE="${{ inputs.release-version }}"
+          if [ -n "$INPUT_RELEASE" ]; then
+            RELEASE="$INPUT_RELEASE"
+            EXPLICIT=true
           else
             RELEASE="${CURRENT%-SNAPSHOT}"
+            EXPLICIT=false
           fi
           echo "Release version: $RELEASE"
 
-          # Next SNAPSHOT version
-          if [ -n "${{ inputs.next-snapshot-version }}" ]; then
-            NEXT="${{ inputs.next-snapshot-version }}"
+          if [ -n "$INPUT_NEXT" ]; then
+            NEXT="$INPUT_NEXT"
           else
-            # Auto-increment patch version
             IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE"
             NEXT_PATCH=$((PATCH + 1))
             NEXT="${MAJOR}.${MINOR}.${NEXT_PATCH}-SNAPSHOT"
           fi
           echo "Next SNAPSHOT version: $NEXT"
 
-          echo "release=$RELEASE" >> $GITHUB_OUTPUT
-          echo "next=$NEXT" >> $GITHUB_OUTPUT
+          PREV_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo '')
+          echo "Previous tag: ${PREV_TAG:-<none>}"
+
+          {
+            echo "release=$RELEASE"
+            echo "next=$NEXT"
+            echo "artifact=$ARTIFACT"
+            echo "explicit=$EXPLICIT"
+            echo "prev_tag=$PREV_TAG"
+            echo "date=$(date -u +%Y-%m-%d)"
+          } >> "$GITHUB_OUTPUT"
+
+      # A breaking change shipped as a patch bump tells every downstream plugin
+      # "safe upgrade" when it is not. This does not guess the right number — it
+      # refuses to guess at all, and makes a human choose.
+      - name: Guard against unmarked breaking changes
+        env:
+          PREV_TAG: ${{ steps.versions.outputs.prev_tag }}
+          EXPLICIT: ${{ steps.versions.outputs.explicit }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+
+          # Conventional Commits carries a breaking change two independent ways:
+          # a "!" before the colon in the header, or a BREAKING CHANGE: footer.
+          SUBJECTS=$(git log --no-merges --format='%H %s' "$RANGE" \
+            | grep -E '^[0-9a-f]+ [a-z]+(\([^)]*\))?!: ' || true)
+          BODIES=$(git log --no-merges --format='%H %s' "$RANGE" \
+            --grep='^BREAKING[ -]CHANGE:' || true)
+          BREAKING=$(printf '%s\n%s\n' "$SUBJECTS" "$BODIES" | grep -v '^$' | sort -u || true)
+
+          if [ -z "$BREAKING" ]; then
+            echo "No breaking changes found in $RANGE."
+            exit 0
+          fi
+
+          echo "Breaking changes found in $RANGE:"
+          echo "$BREAKING" | sed 's/^/  /'
+
+          if [ "$EXPLICIT" = "true" ]; then
+            echo "release-version was given explicitly; continuing."
+            exit 0
+          fi
+
+          {
+            echo "## Release stopped: unmarked breaking changes"
+            echo ""
+            echo "These commits since \`${PREV_TAG:-the first commit}\` declare a breaking change:"
+            echo ""
+            echo '```'
+            echo "$BREAKING"
+            echo '```'
+            echo ""
+            echo "The default bump is PATCH, which would tell every consumer this is a safe"
+            echo "upgrade. Re-run the workflow with an explicit **release-version** that reflects"
+            echo "the break."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::error::breaking changes present; re-run with an explicit release-version"
+          exit 1
 
       - name: Set release version
+        env:
+          RELEASE: ${{ steps.versions.outputs.release }}
+        run: mvn -B versions:set -DnewVersion="$RELEASE" -DgenerateBackupPoms=false
+
+      # Runs before the release commit so CHANGELOG.md is part of it and of the tag.
+      # Skipped entirely in repos that have not opted in by creating the file.
+      - name: Update changelog
+        id: changelog
+        env:
+          RELEASE: ${{ steps.versions.outputs.release }}
+          PREV_TAG: ${{ steps.versions.outputs.prev_tag }}
+          RELEASE_DATE: ${{ steps.versions.outputs.date }}
+          CHANGELOG_SINCE: ${{ inputs.changelog-since }}
         run: |
-          mvn -B versions:set -DnewVersion=${{ steps.versions.outputs.release }} -DgenerateBackupPoms=false
+          set -euo pipefail
+
+          SECTION="$RUNNER_TEMP/release-section.md"
+
+          if [ ! -f CHANGELOG.md ]; then
+            echo "No CHANGELOG.md in this repository; skipping changelog generation."
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Idempotent: a section for this version may already exist because it was
+          # seeded by hand, or because a previous run of this workflow failed after
+          # the insert. Either way, do not write a second one.
+          if grep -q "^## \[${RELEASE}\]" CHANGELOG.md; then
+            echo "CHANGELOG.md already documents ${RELEASE}; reusing that section."
+            # Stops at the next version heading OR at a horizontal rule, because the
+            # oldest section in a seeded changelog is followed by a footer rather than
+            # by another heading — without the second guard that footer ends up inside
+            # the release notes. Leading and trailing blank lines are dropped so the
+            # notes start at the first real line.
+            awk -v h="## [${RELEASE}]" '
+              index($0, h) == 1 { found = 1; next }
+              found && (/^## \[/ || /^---$/) { exit }
+              found {
+                if (n == 0 && !NF) next
+                lines[++n] = $0
+                if (NF) last = n
+              }
+              END { for (i = 1; i <= last; i++) print lines[i] }
+            ' CHANGELOG.md > "$SECTION"
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+            echo "section=$SECTION" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! grep -q '^<!-- next-release -->$' CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '<!-- next-release -->' marker line. Add one below the header so releases know where to insert."
+            exit 1
+          fi
+
+          FROM_ARGS=""
+          if [ -n "$PREV_TAG" ]; then
+            FROM_ARGS="-DfromRevision=$PREV_TAG"
+          elif [ -n "$CHANGELOG_SINCE" ]; then
+            FROM_ARGS="-DfromRevision=$CHANGELOG_SINCE"
+          else
+            echo "::warning::no v* tag and no changelog-since input; this section will cover the entire commit history."
+          fi
+
+          mvn -B se.bjurr.gitchangelog:git-changelog-maven-plugin:git-changelog \
+            -DuntaggedName="$RELEASE" \
+            -DextendedVariablesCli="releaseDate=$RELEASE_DATE" \
+            -Dfile="$SECTION" \
+            $FROM_ARGS
+
+          if [ ! -s "$SECTION" ]; then
+            echo "::warning::changelog generator produced nothing for $RELEASE."
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Insert directly below the marker. prependToFile is not usable here: it
+          # writes at byte 0, which would put the new section above the file header.
+          awk -v f="$SECTION" '
+            { print }
+            /^<!-- next-release -->$/ && !done {
+              print ""
+              while ((getline line < f) > 0) print line
+              done = 1
+            }
+          ' CHANGELOG.md > CHANGELOG.md.new
+          mv CHANGELOG.md.new CHANGELOG.md
+
+          echo "generated=true" >> "$GITHUB_OUTPUT"
+          echo "section=$SECTION" >> "$GITHUB_OUTPUT"
+
+      - name: Commit release
+        env:
+          RELEASE: ${{ steps.versions.outputs.release }}
+        run: |
+          set -euo pipefail
           git add pom.xml
-          git commit -m "release: v${{ steps.versions.outputs.release }}"
+          if [ -f CHANGELOG.md ]; then
+            git add CHANGELOG.md
+          fi
+          git commit -m "release: v${RELEASE}"
 
       - name: Build and deploy release
-        run: mvn -B clean deploy -DskipTests ${{ inputs.maven-args }}
+        run: mvn -B -U clean deploy ${{ inputs.maven-args }}
 
       - name: Create Git tag
-        run: |
-          git tag "v${{ steps.versions.outputs.release }}"
+        env:
+          RELEASE: ${{ steps.versions.outputs.release }}
+        run: git tag "v${RELEASE}"
 
       - name: Bump to next SNAPSHOT
-        run: |
-          mvn -B versions:set -DnewVersion=${{ steps.versions.outputs.next }} -DgenerateBackupPoms=false
-          git add pom.xml
-          git commit -m "chore: bump version to ${{ steps.versions.outputs.next }}"
-
-      - name: Push changes and tag
-        run: |
-          git push origin HEAD
-          git push origin "v${{ steps.versions.outputs.release }}"
         env:
-          GITHUB_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+          NEXT: ${{ steps.versions.outputs.next }}
+        run: |
+          set -euo pipefail
+          mvn -B versions:set -DnewVersion="$NEXT" -DgenerateBackupPoms=false
+          git add pom.xml
+          git commit -m "chore(build): bump version to ${NEXT}"
+
+      # Nothing above this point has left the runner. A failed build leaves the
+      # trunk untouched rather than pushing a release commit with no artifact.
+      - name: Push changes and tag
+        env:
+          RELEASE: ${{ steps.versions.outputs.release }}
+        run: |
+          set -euo pipefail
+          git push origin HEAD
+          git push origin "v${RELEASE}"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+          RELEASE: ${{ steps.versions.outputs.release }}
+          SECTION: ${{ steps.changelog.outputs.section }}
+          GENERATED: ${{ steps.changelog.outputs.generated }}
+          ATTACH: ${{ inputs.attach-artifacts }}
+        run: |
+          set -euo pipefail
+
+          ARGS=(--title "v${RELEASE}")
+          if [ "$GENERATED" = "true" ] && [ -s "$SECTION" ]; then
+            ARGS+=(--notes-file "$SECTION")
+          else
+            ARGS+=(--generate-notes)
+          fi
+
+          if [ "$ATTACH" = "true" ]; then
+            mapfile -t JARS < <(find target -maxdepth 1 -name '*.jar' ! -name 'original-*' 2>/dev/null || true)
+            if [ ${#JARS[@]} -gt 0 ]; then
+              ARGS+=("${JARS[@]}")
+            else
+              echo "::warning::attach-artifacts was true but no JARs were found in target/."
+            fi
+          fi
+
+          gh release create "v${RELEASE}" "${ARGS[@]}"
+
+      # The BOM pin is what downstream actually resolves. Without this step a
+      # release publishes an artifact nothing consumes.
+      - name: Open BOM bump PR
+        if: inputs.bom-property != ''
+        env:
+          GH_TOKEN: ${{ secrets.BOM_DISPATCH_TOKEN }}
+          BOM_TOKEN: ${{ secrets.BOM_DISPATCH_TOKEN }}
+          BOM_REPO: ${{ inputs.bom-repository }}
+          BOM_PROPERTY: ${{ inputs.bom-property }}
+          RELEASE: ${{ steps.versions.outputs.release }}
+          ARTIFACT: ${{ steps.versions.outputs.artifact }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${BOM_TOKEN:-}" ]; then
+            {
+              echo "## BOM not bumped"
+              echo ""
+              echo "\`bom-property\` is set to \`${BOM_PROPERTY}\` but the"
+              echo "\`BOM_DISPATCH_TOKEN\` secret is not configured on this repository, so"
+              echo "no PR could be opened against \`${BOM_REPO}\`."
+              echo ""
+              echo "Downstream still resolves the previous version. Update"
+              echo "\`${BOM_PROPERTY}\` to \`${RELEASE}\` by hand, or add a classic PAT with"
+              echo "the \`repo\` scope as \`BOM_DISPATCH_TOKEN\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::BOM_DISPATCH_TOKEN not set; skipping BOM bump PR"
+            exit 0
+          fi
+
+          WORK="$RUNNER_TEMP/bom"
+          git clone --depth 1 "https://x-access-token:${BOM_TOKEN}@github.com/${BOM_REPO}.git" "$WORK"
+          cd "$WORK"
+
+          # Quits at the first match rather than piping into `head -1`. Under
+          # `set -o pipefail` that pipe aborts the step with 141 once the file is large
+          # enough for head to close it while sed is still writing.
+          CURRENT=$(sed -n "/<${BOM_PROPERTY}>/{s|.*<${BOM_PROPERTY}>\(.*\)</${BOM_PROPERTY}>.*|\1|p;q;}" pom.xml)
+          if [ -z "$CURRENT" ]; then
+            echo "::error::property <${BOM_PROPERTY}> not found in ${BOM_REPO}/pom.xml"
+            exit 1
+          fi
+          if [ "$CURRENT" = "$RELEASE" ]; then
+            echo "${BOM_PROPERTY} is already ${RELEASE}; nothing to do."
+            exit 0
+          fi
+
+          BRANCH="build/bump-${ARTIFACT}-${RELEASE}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          sed -i "s|<${BOM_PROPERTY}>[^<]*</${BOM_PROPERTY}>|<${BOM_PROPERTY}>${RELEASE}</${BOM_PROPERTY}>|" pom.xml
+          git add pom.xml
+          git commit -m "build(deps): bump ${ARTIFACT} to ${RELEASE}"
+          git push -u origin "$BRANCH"
+
+          PR_URL=$(gh pr create \
+            --repo "$BOM_REPO" \
+            --head "$BRANCH" \
+            --title "build(deps): bump ${ARTIFACT} to ${RELEASE}" \
+            --body "$(printf '%s\n' \
+              "Raises \`${BOM_PROPERTY}\` from \`${CURRENT}\` to \`${RELEASE}\`." \
+              "" \
+              "Opened automatically by the ${ARTIFACT} release workflow. Downstream plugins" \
+              "resolve ${ARTIFACT} through this property, so they keep building against" \
+              "\`${CURRENT}\` until this merges.")")
+
+          {
+            echo "## BOM bump"
+            echo ""
+            echo "- property: \`${BOM_PROPERTY}\`"
+            echo "- ${CURRENT} → ${RELEASE}"
+            echo "- PR: ${PR_URL}"
+          } >> "$GITHUB_STEP_SUMMARY"

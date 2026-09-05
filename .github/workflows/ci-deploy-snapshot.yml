@@ -28,10 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Java ${{ inputs.java-version }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: ${{ inputs.java-distribution }}
           java-version: ${{ inputs.java-version }}
@@ -57,12 +57,26 @@ jobs:
                   <repository>
                     <id>restship</id>
                     <url>https://maven.pkg.github.com/romulofebasi/restship</url>
-                    <snapshots><enabled>true</enabled></snapshots>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
                   </repository>
                   <repository>
                     <id>restship-build</id>
                     <url>https://maven.pkg.github.com/luizroddev/rest-build-parent</url>
-                    <snapshots><enabled>true</enabled></snapshots>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
+                  </repository>
+                  <repository>
+                    <id>restship-pvpgame</id>
+                    <url>https://maven.pkg.github.com/luizroddev/rest-module-pvpgame</url>
+                    <snapshots>
+                      <enabled>true</enabled>
+                      <updatePolicy>always</updatePolicy>
+                    </snapshots>
                   </repository>
                 </repositories>
               </profile>
@@ -75,6 +89,11 @@ jobs:
               </server>
               <server>
                 <id>restship-build</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.PACKAGES_TOKEN }}</password>
+              </server>
+              <server>
+                <id>restship-pvpgame</id>
                 <username>${{ github.actor }}</username>
                 <password>${{ secrets.PACKAGES_TOKEN }}</password>
               </server>
@@ -92,4 +111,4 @@ jobs:
           fi
 
       - name: Deploy to GitHub Packages
-        run: mvn -B clean deploy -DskipTests ${{ inputs.maven-args }}
+        run: mvn -B -U clean deploy -DskipTests ${{ inputs.maven-args }}
