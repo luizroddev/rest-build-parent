@@ -18,6 +18,18 @@ on:
         required: false
         type: string
         default: ''
+      run-tests:
+        description: >-
+          Run the test suite as part of the deploy. Libraries set this to true and drop their
+          push-triggered CI Build, so each merge compiles once instead of twice.
+        required: false
+        type: boolean
+        default: false
+      timeout-minutes:
+        description: 'Hard stop for the deploy job, in minutes'
+        required: false
+        type: number
+        default: 20
     secrets:
       PACKAGES_TOKEN:
         description: 'GitHub PAT with read:packages and write:packages scopes'
@@ -26,6 +38,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -111,4 +124,6 @@ jobs:
           fi
 
       - name: Deploy to GitHub Packages
-        run: mvn -B -U clean deploy -DskipTests ${{ inputs.maven-args }}
+        env:
+          SKIP_TESTS: ${{ inputs.run-tests && 'false' || 'true' }}
+        run: mvn -B -U clean deploy -DskipTests="$SKIP_TESTS" ${{ inputs.maven-args }}
