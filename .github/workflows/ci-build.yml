@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: ''
+      timeout-minutes:
+        description: 'Hard stop for the build job, in minutes'
+        required: false
+        type: number
+        default: 20
     secrets:
       PACKAGES_TOKEN:
         description: 'GitHub PAT with read:packages scope for resolving internal dependencies'
@@ -26,6 +31,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -101,8 +107,9 @@ jobs:
           </settings>
           EOF
 
-      - name: Build with Maven
-        run: mvn -B -U clean package -DskipTests ${{ inputs.maven-args }}
-
-      - name: Run tests
-        run: mvn -B -U test ${{ inputs.maven-args }}
+      # One invocation: the second `mvn test` recompiled every source from scratch (40 s of 242 s
+      # in minecore) and paid dependency resolution twice. `package` runs the same tests, stops
+      # at the first failure the same way, and still proves the shaded jar assembles. The source
+      # jar is only needed for publishing, never for verification.
+      - name: Build and test with Maven
+        run: mvn -B -U clean package -Dmaven.source.skip=true ${{ inputs.maven-args }}
