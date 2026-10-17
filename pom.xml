@@ -29,7 +29,7 @@
         <logger.version>0.0.2-SNAPSHOT</logger.version>
         <concurrency.version>0.0.3</concurrency.version>
         <network.version>1.0.37-SNAPSHOT</network.version>
-        <minecore.version>0.1.81</minecore.version>
+        <minecore.version>0.1.83</minecore.version>
         <pvpgame.version>1.0-SNAPSHOT</pvpgame.version>
 
         <jooq.version>3.19.6</jooq.version>
